@@ -1,0 +1,22 @@
+{
+  "rules": {
+    "live": {
+      "$deviceId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('devices').child($deviceId).child('ownerId').val() == auth.uid)"
+      }
+    },
+    "devices": {
+      "$deviceId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || data.child('ownerId').val() == auth.uid)"
+      }
+    },
+    "users": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid == $uid || root.child('users').child(auth.uid).child('role').val() == 'admin')",
+        ".write": "auth != null && (auth.uid == $uid || root.child('users').child(auth.uid).child('role').val() == 'admin')"
+      }
+    }
+  }
+}
