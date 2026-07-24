@@ -13,6 +13,7 @@ export function useRealtimeSensor() {
   const listenerRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
+    // SINKRONISASI JALUR: Mengikuti struktur database aktual dari main_2.cpp
     const liveRef = ref(rtdb, `live/${DEVICE_ID}`);
     const configRef = ref(rtdb, `config/${DEVICE_ID}`);
     const connectedRef = ref(rtdb, '.info/connected');
@@ -55,22 +56,23 @@ export function useRealtimeSensor() {
     };
   }, []);
 
-const sendCommand = useCallback(async (command: Partial<ActuatorState>) => {
-  try {
-    const cmdRef = ref(rtdb, `commands/${DEVICE_ID}/${Date.now()}`);
-    await set(cmdRef, {
-      ...command,
-      timestamp: serverTimestamp(),
-      from: 'dashboard',
-    });
-  } catch (err) {
-    console.error('Failed to send command:', err);
-    throw err;
-  }
-}, []);
+  const sendCommand = useCallback(async (command: Partial<ActuatorState>) => {
+    try {
+      const cmdRef = ref(rtdb, `commands/${DEVICE_ID}/${Date.now()}`);
+      await set(cmdRef, {
+        ...command,
+        timestamp: serverTimestamp(),
+        from: 'dashboard',
+      });
+    } catch (err) {
+      console.error('Failed to send command:', err);
+      throw err;
+    }
+  }, []);
 
   const calibratePump = useCallback(async (mlPerSecond: number) => {
     try {
+      // SINKRONISASI JALUR: Mempertahankan format pumpCalibration/mlPerSecond sesuai spek dashboard
       const calibRef = ref(rtdb, `config/${DEVICE_ID}/pumpCalibration`);
       await update(calibRef, {
         mlPerSecond,
@@ -126,9 +128,18 @@ export function useRealtimeHistory(hours = 24) {
       if (snap.exists()) {
         const data = snap.val();
         const entries = Object.entries(data)
-          .filter(([, v]: [string, unknown]) => (v as SensorData).timestamp > cutoff)
-          .map(([, v]) => v as SensorData)
+          .map(([, v]) => {
+            const sensorItem = v as any;
+            return {
+              ...sensorItem,
+              // FIX INVALID DATE: Memaksa konversi string dari ESP32 menjadi tipe data Number
+              timestamp: sensorItem.timestamp ? Number(sensorItem.timestamp) : Date.now()
+            };
+          })
+          // Proses filter dan sorting berjalan presisi menggunakan komparasi Number
+          .filter((item) => item.timestamp > cutoff)
           .sort((a, b) => a.timestamp - b.timestamp);
+          
         setHistory(entries);
       } else {
         setHistory([]);

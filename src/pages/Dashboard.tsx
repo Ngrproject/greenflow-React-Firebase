@@ -6,7 +6,7 @@ import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tool
 import { 
   Wifi, Cpu, Zap, Fan, Droplet, Thermometer, Activity, 
   Lock, Unlock, Battery, ArrowRight, Sun, Layers,
-  Bot, ToggleLeft, ClipboardList, Sliders, Timer // 🌟 Tambahkan ToggleLeft di sini
+  Bot, ToggleLeft, ClipboardList, Sliders, Timer
 } from 'lucide-react';
 
 const dummyData: SensorReading = {
@@ -44,7 +44,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
       <div className="p-3 bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-xl shadow-soft">
-        <p className="text-xs text-surface-500 dark:text-surface-400 font-medium mb-1.5 border-b border-surface-100 dark:border-surface-800 pb-1">
+        <p className="text-xs text-surface-500 dark:text-surface-440 font-medium mb-1.5 border-b border-surface-100 dark:border-surface-800 pb-1">
           {new Date(label).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
         </p>
         <div className="space-y-1">
@@ -65,8 +65,30 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-function DashboardGauge({ value, min = 0, max = 100, label, unit, color, status, icon: Icon }: { value: number; min?: number; max?: number; label: string; unit: string; color: 'orange' | 'emerald' | 'blue' | 'yellow'; status: string; icon: any }) {
+function DashboardGauge({ 
+  value, 
+  min = 0, 
+  max = 100, 
+  label, 
+  unit, 
+  color, 
+  status, 
+  icon: Icon,
+  extraInfo
+}: { 
+  value: number; 
+  min?: number; 
+  max?: number; 
+  label: string; 
+  unit: string; 
+  color: 'orange' | 'emerald' | 'blue' | 'yellow'; 
+  status: string; 
+  icon: any;
+  extraInfo?: React.ReactNode;
+}) {
   const percentage = Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100));
+  const totalLength = 141.37;
+  const strokeDashoffset = totalLength - (totalLength * percentage) / 100;
   
   const strokeColorMap = {
     orange: 'stroke-orange-500 dark:stroke-orange-400 text-orange-500 dark:text-orange-400',
@@ -82,9 +104,14 @@ function DashboardGauge({ value, min = 0, max = 100, label, unit, color, status,
     yellow: 'bg-yellow-50 dark:bg-yellow-950/20 border-yellow-100 dark:border-yellow-900/40 text-yellow-600 dark:text-yellow-400',
   };
 
+  // Logika penentu teks label kecil di bawah angka agar dinamis dan tidak "Suhu Aktual" semua
+  const subLabel = label.toLowerCase().includes('lingkungan') ? 'SUHU AKTUAL' 
+                 : label.toLowerCase().includes('tanah') ? 'RATA-RATA' 
+                 : 'TEGANGAN AKI';
+
   return (
     <div className="bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-3xl p-6 shadow-soft hover:shadow-md hover:border-primary-500/20 dark:hover:border-primary-55/20 transition-all duration-300 flex flex-col justify-between">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-2">
         <span className="text-xs font-bold text-surface-500 dark:text-surface-450 uppercase tracking-wider flex items-center gap-1.5">
           <Icon className="w-4 h-4" />
           {label}
@@ -93,58 +120,66 @@ function DashboardGauge({ value, min = 0, max = 100, label, unit, color, status,
           {status}
         </span>
       </div>
-      <div className="my-2 relative h-32 flex items-center justify-center">
-        <svg className="w-32 h-32 transform -rotate-90">
-          <circle cx="64" cy="64" r="48" className="stroke-surface-100 dark:stroke-surface-800" strokeWidth="5" fill="transparent" />
-          <circle 
-            cx="64" 
-            cy="64" 
-            r="48" 
-            className={cn('transition-all duration-1000 ease-out', strokeColorMap[color])} 
-            strokeWidth="6" 
-            fill="transparent" 
-            strokeDasharray="301.6" 
-            strokeDashoffset={301.6 - (301.6 * percentage) / 100}
+      
+      {/* Box Viewport Setengah Lingkaran Sempurna */}
+      <div className="relative h-20 flex items-end justify-center overflow-hidden mb-4">
+        <svg className="w-28 h-14" viewBox="0 0 100 50">
+          <path
+            d="M 5,50 A 45,45 0 0,1 95,50"
+            fill="transparent"
+            className="stroke-surface-100 dark:stroke-surface-800"
+            strokeWidth="8"
+            strokeLinecap="round"
+          />
+          <path
+            d="M 5,50 A 45,45 0 0,1 95,50"
+            fill="transparent"
+            className={cn('transition-all duration-1000 ease-out', strokeColorMap[color])}
+            strokeWidth="8"
+            strokeDasharray={totalLength}
+            strokeDashoffset={strokeDashoffset}
             strokeLinecap="round"
           />
         </svg>
-        <div className="absolute text-center">
-          <span className="text-3xl font-black text-surface-900 dark:text-surface-50 tracking-tight">
+        
+        {/* FIX: Menggeser posisi y turun ke bawah agar pas di tengah arch dan tidak menabrak teks statis */}
+        <div className="absolute text-center translate-y-[14px]">
+          <span className="text-2xl font-black text-surface-900 dark:text-surface-50 tracking-tight">
             {formatNumber(value)}
-            <span className="text-sm font-normal text-surface-500 ml-0.5">{unit}</span>
+            <span className="text-xs font-normal text-surface-400 ml-0.5">{unit}</span>
           </span>
-          <span className="block text-[8px] text-surface-400 dark:text-surface-500 font-bold uppercase tracking-widest mt-0.5">real time</span>
+          {/* FIX: Menggunakan subLabel dinamis agar teks rapi sesuai jenis kotak */}
+          <span className="block text-[8px] text-surface-400 dark:text-surface-500 font-bold uppercase tracking-widest mt-0.5">{subLabel}</span>
         </div>
       </div>
+
+      {extraInfo && (
+        <div className="border-t border-surface-100 dark:border-surface-850 pt-3 mt-1 space-y-1.5 text-xs text-surface-500 dark:text-surface-400 font-medium">
+          {extraInfo}
+        </div>
+      )}
     </div>
   );
 }
-
 export function DashboardPage() {
   const { liveData: rtdbLiveData, config, sendCommand } = useRealtimeSensor();
   const { history: rtdbHistory } = useRealtimeHistory(24);
 
-  // Fallbacks for simulated data
   const [simulatedLiveData, setSimulatedLiveData] = useState<SensorReading>(dummyData);
-  
-  // Local toggles for simulated actuators
   const [simulatedPumpOn, setSimulatedPumpOn] = useState(false);
   const [simulatedFanOn, setSimulatedFanOn] = useState(true);
   const [simulatedMode, setSimulatedMode] = useState<'auto' | 'manual' | 'schedule'>('schedule');
 
   const [chartMetric, setChartMetric] = useState<'climate' | 'vpd' | 'soil'>('climate');
 
-  // simulated metrics calculation
   useEffect(() => {
     const vpd = calculateVPD(simulatedLiveData.temperature, simulatedLiveData.humidity);
     const batteryPercent = voltageToPercent(simulatedLiveData.batteryVoltage);
     setSimulatedLiveData(prev => ({ ...prev, vpd, batteryPercent }));
   }, [simulatedLiveData.temperature, simulatedLiveData.humidity, simulatedLiveData.batteryVoltage]);
 
-  // PAKSA mendeteksi data jika rtdbLiveData terhubung, hilangkan validasi ketat anak properti .sensors
   const hasRealData = rtdbLiveData !== null;
 
-  // Resolve dynamic states dengan fallback aman (||) untuk mencegah Uncaught Runtime Error / Layar Gelap
   const liveData: SensorReading = useMemo(() => {
     if (hasRealData && rtdbLiveData) {
       const s = rtdbLiveData.sensors || {};
@@ -193,20 +228,16 @@ export function DashboardPage() {
       });
       return mapped.slice(-7);
     }
-    return []; // Bersih total dari dummy history
+    return [];
   }, [rtdbHistory, hasRealData, simulatedLiveData]);
 
-  // Sinkronisasi data kontrol aktuator aktual dari Firebase
   const activeMode = simulatedMode || (hasRealData && rtdbLiveData?.actuators?.mode ? rtdbLiveData.actuators.mode : 'schedule');
   const pumpOn = hasRealData && rtdbLiveData?.actuators?.pump !== undefined ? rtdbLiveData.actuators.pump : simulatedPumpOn;
   const fanOn = hasRealData && rtdbLiveData?.actuators?.fan !== undefined ? rtdbLiveData.actuators.fan : simulatedFanOn;
 
   const handleModeChange = useCallback(async (newMode: 'auto' | 'manual' | 'schedule') => {
-    // Update state lokal terlebih dahulu agar tombol langsung berubah warna saat diklik
     setSimulatedMode(newMode); 
-    
     try {
-      // Jalankan pengiriman perintah ke Firebase secara background
       if (sendCommand) {
         await sendCommand({ mode: newMode });
       }
@@ -235,25 +266,35 @@ export function DashboardPage() {
     }
   }, [activeMode, fanOn, sendCommand]);
 
-  // Network operational specs
   const wifiSSID = hasRealData && (rtdbLiveData?.sensors as any)?.wifi_ssid ? (rtdbLiveData.sensors as any).wifi_ssid : 'GREENFLOW-IOT';
   const wifiRSSI = liveData.rssi;
   const ipAddress = hasRealData && (rtdbLiveData?.sensors as any)?.wifi_ip ? (rtdbLiveData.sensors as any).wifi_ip : '192.168.1.105';
 
-  // Check if ESP32 last sync was within 5 minutes
   const isOnline = useMemo(() => {
-    if (!hasRealData) return false; // Default ke false jika belum terhubung
+    if (!hasRealData) return false;
     const minutesSinceSync = (Date.now() - liveData.timestamp) / 60000;
     return minutesSinceSync < 5;
   }, [liveData.timestamp, hasRealData]);
 
-  // Dynamic calculations of Planting Date & Target Siram
-  const plantingDateStr = config?.plantingDate || '2026-06-16';
-  const hstSekarang = useMemo(() => {
-    const start = new Date(plantingDateStr);
-    const diff = Math.floor((Date.now() - start.getTime()) / (24 * 3600 * 1000));
-    return Math.max(1, diff + 1);
-  }, [plantingDateStr]);
+const plantingDateStr = config?.plantingDate || '2026-05-20';
+
+const hstSekarang = useMemo(() => {
+  if (!plantingDateStr) return 0;
+
+  // Samakan tumpuan ke 00:00:00 waktu lokal
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
+  const start = new Date(plantingDateStr);
+  // Tangani parsing YYYY-MM-DD agar dianggap jam 00:00 waktu lokal
+  const startLocal = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+
+  const diffInMs = now.getTime() - startLocal.getTime();
+  const diffInDays = Math.floor(diffInMs / (24 * 3600 * 1000));
+
+  // Jika belum tanam (diff < 0), return 0. Jika sudah tanam, H-1 tanam = 1 HST.
+  return diffInDays < 0 ? 0 : diffInDays + 1;
+}, [plantingDateStr]);
 
   const targetSiram = useMemo(() => {
     if (config?.schedules && Array.isArray(config.schedules)) {
@@ -321,18 +362,18 @@ export function DashboardPage() {
           </div>
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
-            <p className="text-xs text-surface-500 dark:text-surface-400 mt-0.5 font-medium">Sistem Otomatisasi Greenhouse Melon Hybrid</p>
+            <p className="text-xs text-surface-500 dark:text-surface-440 mt-0.5 font-medium">Sistem Otomatisasi Greenhouse Melon Hybrid</p>
           </div>
         </div>
         
         <div className="flex flex-wrap items-center gap-4 text-xs font-semibold">
           {isOnline ? (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-440">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               ESP32 ONLINE
             </div>
           ) : (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-440">
               <span className="w-2 h-2 rounded-full bg-rose-500"></span>
               ESP32 OFFLINE
             </div>
@@ -367,7 +408,7 @@ export function DashboardPage() {
                 'py-2 rounded-xl text-xs tracking-wide transition-all duration-350 font-bold flex items-center justify-center gap-1.5',
                 activeMode === 'auto' 
                   ? 'bg-white dark:bg-surface-900 text-primary-600 dark:text-primary-400 shadow-sm border border-surface-200 dark:border-surface-800' 
-                  : 'text-surface-500 hover:text-surface-800 dark:text-surface-400 dark:hover:text-surface-200'
+                  : 'text-surface-500 hover:text-surface-800 dark:text-surface-440 dark:hover:text-surface-200'
               )}
             >
               <Cpu className="w-3.5 h-3.5 shrink-0" />
@@ -379,7 +420,7 @@ export function DashboardPage() {
                 'py-2 rounded-xl text-xs tracking-wide transition-all duration-350 font-bold flex items-center justify-center gap-1.5',
                 activeMode === 'schedule' 
                   ? 'bg-white dark:bg-surface-900 text-primary-600 dark:text-primary-400 shadow-sm border border-surface-200 dark:border-surface-800' 
-                  : 'text-surface-500 hover:text-surface-800 dark:text-surface-400 dark:hover:text-surface-200'
+                  : 'text-surface-500 hover:text-surface-800 dark:text-surface-440 dark:hover:text-surface-200'
               )}
             >
               <Timer className="w-3.5 h-3.5 shrink-0" />
@@ -391,7 +432,7 @@ export function DashboardPage() {
                 'py-2 rounded-xl text-xs tracking-wide transition-all duration-350 font-bold flex items-center justify-center gap-1.5',
                 activeMode === 'manual' 
                   ? 'bg-white dark:bg-surface-900 text-primary-600 dark:text-primary-400 shadow-sm border border-surface-200 dark:border-surface-800' 
-                  : 'text-surface-500 hover:text-surface-800 dark:text-surface-400 dark:hover:text-surface-200'
+                  : 'text-surface-500 hover:text-surface-800 dark:text-surface-440 dark:hover:text-surface-200'
               )}
             >
               <Sliders className="w-3.5 h-3.5 shrink-0" />
@@ -425,7 +466,7 @@ export function DashboardPage() {
                 'flex items-center justify-between p-3.5 rounded-2xl border transition-all duration-300',
                 fanOn && activeMode === 'manual'
                   ? 'border-orange-200 bg-orange-50 dark:border-orange-900/30 dark:bg-orange-950/20 text-orange-600 dark:text-orange-450' 
-                  : 'border-surface-150 dark:border-surface-850 bg-surface-50 dark:bg-surface-950 text-surface-500 dark:text-surface-400 disabled:opacity-40'
+                  : 'border-surface-150 dark:border-surface-850 bg-surface-50 dark:bg-surface-950 text-surface-500 dark:text-surface-440 disabled:opacity-40'
               )}
             >
               <span className="text-xs font-bold flex items-center gap-2">
@@ -444,7 +485,7 @@ export function DashboardPage() {
                 'flex items-center justify-between p-3.5 rounded-2xl border transition-all duration-300',
                 pumpOn && activeMode === 'manual'
                   ? 'border-sky-200 bg-sky-50 dark:border-sky-900/30 dark:bg-sky-950/20 text-sky-600 dark:text-sky-450' 
-                  : 'border-surface-150 dark:border-surface-850 bg-surface-50 dark:bg-surface-950 text-surface-500 dark:text-surface-400 disabled:opacity-40'
+                  : 'border-surface-150 dark:border-surface-850 bg-surface-50 dark:bg-surface-950 text-surface-500 dark:text-surface-440 disabled:opacity-40'
               )}
             >
               <span className="text-xs font-bold flex items-center gap-2">
@@ -465,33 +506,69 @@ export function DashboardPage() {
           value={liveData.temperature} 
           min={10} 
           max={50} 
-          label="Suhu Udara" 
+          label="Parameter Lingkungan" 
           unit="°C" 
           color="orange" 
           status={liveData.temperature > 35 ? 'Stres Suhu' : 'Optimal'} 
           icon={Thermometer}
+          extraInfo={
+            <>
+              <div className="flex justify-between">
+                <span>Lembab Udara:</span>
+                <span className="font-bold text-surface-900 dark:text-surface-100">{formatNumber(liveData.humidity, 1)} %</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Tekanan Defisit (VPD):</span>
+                <span className="font-bold text-purple-500 dark:text-purple-400">{formatNumber(liveData.vpd, 1)} kPa</span>
+              </div>
+            </>
+          }
         />
 
         <DashboardGauge 
           value={avgSoil} 
           min={0} 
           max={100} 
-          label="Kadar Air Tanah" 
+          label="Kadar Air Tanah Media" 
           unit="%" 
           color="emerald" 
-          status={avgSoil < 45 ? 'Kering' : 'Normal'} 
+          status={avgSoil < 45 ? 'Kering' : 'Kecukupan'} 
           icon={Droplet}
+          extraInfo={
+            <>
+              <div className="flex justify-between">
+                <span>Sensor Zona A:</span>
+                <span className="font-bold text-surface-900 dark:text-surface-100">{liveData.soilMoistureA} %</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Sensor Zona B:</span>
+                <span className="font-bold text-surface-900 dark:text-surface-100">{liveData.soilMoistureB} %</span>
+              </div>
+            </>
+          }
         />
 
         <DashboardGauge 
           value={liveData.batteryVoltage} 
           min={11} 
           max={15} 
-          label="Daya & Sistem Aki" 
+          label="Monitoring Daya Utama" 
           unit="V" 
           color="yellow" 
           status={sourceDaya.toUpperCase()} 
           icon={Battery}
+          extraInfo={
+            <>
+              <div className="flex justify-between">
+                <span>Tegangan Tertinggi (Max):</span>
+                <span className="font-bold text-rose-500">{formatNumber(maxAki, 1)} V</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Tegangan Terendah (Min):</span>
+                <span className="font-bold text-sky-500">{formatNumber(minAki, 1)} V</span>
+              </div>
+            </>
+          }
         />
       </div>
 
@@ -600,7 +677,7 @@ export function DashboardPage() {
               <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 border-2 border-emerald-500 dark:border-emerald-400 flex items-center justify-center text-emerald-500 dark:text-emerald-400 shadow-inner">
                 <Activity className="w-6 h-6 animate-pulse" />
               </div>
-              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">Greenhouse</span>
+              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-440">Greenhouse</span>
             </div>
           </div>
 
@@ -617,7 +694,7 @@ export function DashboardPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
             <h3 className="text-lg font-bold tracking-tight">Kurva Tren Parameter (7 Log Terakhir)</h3>
-            <p className="text-xs text-surface-500 dark:text-surface-400 mt-0.5 font-medium">Analisis tren runtun waktu instrumen greenhouse</p>
+            <p className="text-xs text-surface-500 dark:text-surface-440 mt-0.5 font-medium">Analisis tren runtun waktu instrumen greenhouse</p>
           </div>
           
           <div className="flex flex-wrap gap-1.5 p-1 rounded-xl bg-surface-50 dark:bg-surface-950 border border-surface-150 dark:border-surface-850 max-w-sm sm:max-w-md">
@@ -633,7 +710,7 @@ export function DashboardPage() {
                   'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200',
                   chartMetric === tab.id
                     ? 'bg-white dark:bg-surface-900 text-primary-600 dark:text-primary-400 shadow-sm border border-surface-200/60 dark:border-surface-800'
-                    : 'text-surface-500 hover:text-surface-800 dark:text-surface-400 dark:hover:text-surface-200'
+                    : 'text-surface-500 hover:text-surface-800 dark:text-surface-440 dark:hover:text-surface-200'
                 )}
               >
                 {tab.label}

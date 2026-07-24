@@ -68,18 +68,20 @@ export function PengaturanAlatPage() {
     }
   }, [config]);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
 
     const seconds = Number(detikKalibrasiPompa);
     const debit = seconds > 0 ? Math.round((100.0 / seconds) * 100) / 100 : 3.0;
+
+    // Menyiapkan string waktu HH:MM bersih tanpa detik berlebih
+    const formattedRestartTime = autoRestartTime.length >= 5 ? autoRestartTime.slice(0, 5) : '02:00';
 
     const payload = {
       suhu_kipas_on: Number(suhuKipasOn),
       suhu_kipas_off: Number(suhuKipasOff),
       lembab_kipas_on: Number(lembabKipasOn),
       lembab_kipas_off: Number(lembabKipasOff),
-      // Injecting Battery Saver parameters into payload
       battery_saver_status: batterySaverStatus,
       battery_saver_time: batterySaverTime,
       kipas_siklus_on: Number(kipasSiklusOn),
@@ -89,7 +91,7 @@ export function PengaturanAlatPage() {
       detik_kalibrasi_pompa: seconds,
       debit_pompa: debit,
       auto_restart_status: autoRestartStatus,
-      auto_restart_time: `${autoRestartTime}:00`,
+      auto_restart_time: formattedRestartTime, // FIX: Mengirim HH:MM bersih
     };
 
     if (config !== null) {

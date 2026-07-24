@@ -24,7 +24,8 @@ export function JadwalPage() {
   const { config, updateConfig } = useRealtimeSensor();
 
   // Local state fallbacks if Firebase config is loading/empty
-  const [localPlantingDate, setLocalPlantingDate] = useState('2026-06-16');
+  // Ubah dari '2026-06-16' menjadi '2026-05-20'
+  const [localPlantingDate, setLocalPlantingDate] = useState('2026-05-20');
   const [localSchedules, setLocalSchedules] = useState<ScheduleItem[]>(defaultSchedules);
 
   // Form states
@@ -51,10 +52,20 @@ export function JadwalPage() {
   }, [config, localSchedules, hasRealData]);
 
   // Calculate current HST based on plantingDate
+// Calculate current HST based on plantingDate (Timezone Safe)
   const hstBerjalan = useMemo(() => {
+    if (!plantingDate) return 1;
+
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
     const start = new Date(plantingDate);
-    const diff = Math.floor((Date.now() - start.getTime()) / (24 * 3600 * 1000));
-    return Math.max(1, diff + 1);
+    const startLocal = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+
+    const diffInMs = now.getTime() - startLocal.getTime();
+    const diffInDays = Math.floor(diffInMs / (24 * 3600 * 1000));
+
+    return diffInDays < 0 ? 0 : diffInDays + 1;
   }, [plantingDate]);
 
   const handleSavePlantingDate = useCallback(async (e: React.FormEvent) => {
@@ -67,14 +78,27 @@ export function JadwalPage() {
     }
   }, [hasRealData, plantingDate, updateConfig]);
 
-  const handleAddSchedule = useCallback(async (e: React.FormEvent) => {
+const handleAddSchedule = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!hstMulai || !hstSelesai || !targetMl || !waktuSiram) {
       alert('Tolong lengkapi semua input form jadwal!');
       return;
     }
 
-    const jamArray = waktuSiram.split(',').map(t => t.trim()).filter(Boolean);
+    // FIX: Sanitasi ketat untuk memastikan format selalu "HH:MM" tanpa spasi tersembunyi
+    const jamArray = waktuSiram
+      .split(',')
+      .map(t => t.trim())
+      .filter(Boolean)
+      .map(t => {
+        const parts = t.split(':');
+        if (parts.length === 2) {
+          const h = parts[0].padStart(2, '0');
+          const m = parts[1].padStart(2, '0');
+          return `${h}:${m}`;
+        }
+        return t;
+      });
 
     const newJadwal: ScheduleItem = {
       id: Date.now().toString(),

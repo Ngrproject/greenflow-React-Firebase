@@ -110,8 +110,8 @@ export function AnalisisPage() {
           soilMoistureB: h.soilMoistureB || 0,
           batteryVoltage: h.batteryVoltage || 0,
           statusDaya,
-          pumpStatus: h.pumpState ? 1 : 0, 
-          fanStatus: h.fanState ? 1 : 0,   
+          pumpStatus: (h.pump !== undefined ? h.pump : h.pumpState) ? 1 : 0, 
+          fanStatus: (h.fan !== undefined ? h.fan : h.fanState) ? 1 : 0,   
           timestamp: h.timestamp || Date.now(),
         };
       });
@@ -367,9 +367,16 @@ export function AnalisisPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={logs} margin={{ left: -15, right: 10, top: 10, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-surface-100 dark:stroke-surface-800" vertical={false} />
-                    <XAxis 
-                      dataKey="timestamp" 
-                      tickFormatter={(t) => new Date(t).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                    <XAxis
+                      dataKey="timestamp"
+                      tickFormatter={(t) => {
+                        // Mengonversi unix timestamp murni ke jam lokal komputer (WIB)
+                        return new Date(Number(t)).toLocaleTimeString('id-ID', { 
+                          hour: '2-digit', 
+                          minute: '2-digit',
+                          hour12: false 
+                        }).replace('.', ':'); // Mengubah titik bawaan id-ID menjadi standar titik dua (HH:MM)
+                      }}
                       className="text-[10px] font-bold fill-surface-400 dark:fill-surface-500"
                       axisLine={false}
                       tickLine={false}
